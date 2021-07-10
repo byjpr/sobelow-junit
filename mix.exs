@@ -21,6 +21,10 @@ defmodule SobelowJunit.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
+      {:sobelow, "~> 0.7", only: [:dev, :test], runtime: false},
+      {:credo_junit,
+       git: "https://github.com/byjpr/credo-junit", only: [:dev, :test], runtime: false},
       {:jason, "~> 1.2.2"},
       {:phoenix_html, "~> 2.11"}
       # {:dep_from_hexpm, "~> 0.3.0"},
