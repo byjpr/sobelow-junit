@@ -1,0 +1,61 @@
+version: 2
+jobs:
+  build:
+    parallelism: 1
+    docker:
+      - image: byjord/alpine-elixir-22.0.3:latest
+
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - run: mix local.hex --force
+      - run: mix local.rebar --force
+
+      - restore_cache:
+          keys:
+            - v1-mix-cache-{{ .Branch }}-{{ checksum "mix.lock" }}
+            - v1-mix-cache-{{ .Branch }}
+            - v1-mix-cache
+
+      - restore_cache:
+          keys:
+            - v1-build-cache-{{ .Branch }}
+            - v1-build-cache
+
+      - run: mix do deps.get, compile
+
+      - save_cache:
+          key: v1-mix-cache-{{ .Branch }}-{{ checksum "mix.lock" }}
+          paths: "deps"
+
+      - save_cache:
+          key: v1-build-cache-{{ .Branch }}
+          paths: "_build"
+
+      - run:
+          name: Make temporary report files
+          command: mkdir reports && touch reports/sobelow.json && touch reports/credo.json
+
+      - run:
+          name: Sobelow static analysis
+          # command: mix sobelow --config > reports/sobelow.json && ls -a reports
+          command: mix sobelow $1 --format sarif --exit false >> reports/sobelow.sarif.json
+          when: always
+
+      - run:
+          name: Credo static analysis
+          command: mix credo $1 --format json >> reports/credo.json
+          when: always
+
+      - run:
+          name: Convert report to JUnit
+          command: |
+            mix sobelow_to_junit
+            mix credo_to_junit
+          when: always
+
+      - store_artifacts:
+          path: reports
+
+      - store_test_results:
+          path: reports
